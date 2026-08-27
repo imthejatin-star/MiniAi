@@ -487,57 +487,80 @@ function topKSample(logits){
    MODEL PREDICTION
    ============================================================ */
 
-async function predict(inputIds){
 
-  const sequenceLength =
-    inputIds.length;
+  async function predict(inputIds){
 
+  if(!session){
+    throw new Error("Model is not loaded.");
+  }
+
+  const blockSize =
+    Number(modelConfig.block_size);
+
+  const unkId =
+    Number(stoi["<UNK>"] ?? 1);
+
+  /*
+    Keep only the most recent tokens.
+  */
+
+  let context =
+    inputIds.slice(-blockSize);
+
+  /*
+    Pad the beginning of the sequence.
+
+    The model always receives exactly
+    BLOCK_SIZE tokens.
+  */
+
+  if(context.length < blockSize){
+
+    const padding =
+      new Array(
+        blockSize - context.length
+      ).fill(unkId);
+
+    context =
+      padding.concat(context);
+  }
 
   const tensor =
     new ort.Tensor(
       "int64",
       BigInt64Array.from(
-        inputIds.map(
-          Number
-        )
+        context,
+        Number
       ),
       [
         1,
-        sequenceLength
+        blockSize
       ]
     );
-
 
   const results =
     await session.run({
       input_ids: tensor
     });
 
-
   const output =
     results.logits;
-
-
-  /*
-    logits shape:
-
-    [batch, sequence, vocabulary]
-  */
 
   const vocabularySize =
     output.dims[
       output.dims.length - 1
     ];
 
+  /*
+    We want the prediction at the
+    final position of the sequence.
+  */
 
   const lastPosition =
-    sequenceLength - 1;
-
+    blockSize - 1;
 
   const start =
-    lastPosition *
-    vocabularySize;
-
+    lastPosition * vocabularySize;
 
   return Array.from(
     output.data.slice(
@@ -545,8 +568,7 @@ async function predict(inputIds){
       start + vocabularySize
     )
   );
-
-}
+  }
 
 
 /* ============================================================
@@ -618,15 +640,9 @@ async function generateAnswer(question){
     i++
   ){
 
-    const context =
-      ids.slice(
-        -modelConfig.block_size
-      );
-
-
-    const logits =
-      await predict(context);
-
+  
+const logits =
+  await predict(ids);
 
     const nextId =
       topKSample(logits);
