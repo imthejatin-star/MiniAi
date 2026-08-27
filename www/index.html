@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#080b12">
 <title>MiniAI</title>
 
+<script src="ort.min.js"></script>
+
 <style>
 *{
   box-sizing:border-box;
@@ -59,6 +61,7 @@ header{
   line-height:1.5;
   font-size:15px;
   white-space:pre-wrap;
+  word-wrap:break-word;
 }
 
 .ai{
@@ -148,7 +151,7 @@ header{
 
 <header>
   <div class="logo">MiniAI</div>
-  <div class="status" id="status">Loading brain...</div>
+  <div class="status" id="status">Loading neural brain...</div>
 </header>
 
 <main id="chat">
@@ -157,7 +160,8 @@ header{
     <div>
       <h1>MiniAI</h1>
       <p>
-        A small AI that learns from your training data.
+        A tiny neural language model<br>
+        running locally on your device.
       </p>
     </div>
   </div>
@@ -172,7 +176,7 @@ header{
     placeholder="Ask MiniAI something..."
   ></textarea>
 
-  <button id="send">↑</button>
+  <button id="send" disabled>↑</button>
 
 </div>
 
@@ -180,7 +184,10 @@ header{
 
 <script>
 
-let model = null;
+let session = null;
+let stoi = {};
+let itos = {};
+let modelConfig = null;
 
 const chat = document.getElementById("chat");
 const input = document.getElementById("input");
@@ -189,222 +196,470 @@ const statusText = document.getElementById("status");
 const empty = document.getElementById("empty");
 
 
-/* =========================================================
+/* ============================================================
+   CONFIG
+   ============================================================ */
+
+const UNK = "<UNK>";
+
+const MAX_INPUT_TOKENS = 48;
+const MAX_GENERATED_TOKENS = 60;
+
+const TEMPERATURE = 0.85;
+
+const TOP_K = 20;
+
+
+/* ============================================================
+   TOKENIZER
+   ============================================================ */
+
+function tokenize(text){
+
+  return text
+    .toLowerCase()
+    .match(/\w+|[^\w\s]/g) || [];
+
+}
+
+
+/* ============================================================
+   LOAD VOCABULARY
+   ============================================================ */
+
+async function loadVocabulary(){
+
+  const response =
+    await fetch("vocab.json");
+
+  if(!response.ok){
+
+    throw new Error(
+      "vocab.json could not be loaded."
+    );
+
+  }
+
+  const data =
+    await response.json();
+
+  stoi =
+    data.stoi || {};
+
+  itos =
+    data.itos || {};
+
+}
+
+
+/* ============================================================
    LOAD MODEL
-   ========================================================= */
+   ============================================================ */
 
 async function loadModel(){
 
+  if(typeof ort === "undefined"){
+
+    throw new Error(
+      "ONNX Runtime failed to load."
+    );
+
+  }
+
+  /*
+    Keep WASM files next to the application.
+  */
+
+  ort.env.wasm.wasmPaths = "./";
+
+  session =
+    await ort.InferenceSession.create(
+      "model.onnx",
+      {
+        executionProviders: ["wasm"],
+        graphOptimizationLevel: "all"
+      }
+    );
+
+}
+
+
+/* ============================================================
+   LOAD CONFIG
+   ============================================================ */
+
+async function loadConfig(){
+
+  /*
+    The model configuration is stored
+    separately so the browser knows
+    the model context length.
+  */
+
+  const response =
+    await fetch("model_config.json");
+
+  if(!response.ok){
+
+    throw new Error(
+      "model_config.json could not be loaded."
+    );
+
+  }
+
+  modelConfig =
+    await response.json();
+
+}
+
+
+/* ============================================================
+   INITIALIZE
+   ============================================================ */
+
+async function initialize(){
+
   try{
 
-    const response = await fetch("model.json");
+    statusText.textContent =
+      "Loading vocabulary...";
 
-    if(!response.ok){
-      throw new Error("Model not found");
-    }
+    await loadVocabulary();
 
-    model = await response.json();
 
     statusText.textContent =
-      "Brain ready • " +
-      model.vocabulary_size.toLocaleString() +
-      " words";
+      "Loading neural brain...";
+
+    await loadConfig();
+
+    await loadModel();
+
+
+    const vocabularySize =
+      Object.keys(stoi).length;
+
+
+    statusText.textContent =
+      "Neural brain ready • " +
+      vocabularySize.toLocaleString() +
+      " tokens";
+
 
     send.disabled = false;
+
+    input.focus();
+
 
   }catch(error){
 
     console.error(error);
 
     statusText.textContent =
-      "Brain not installed";
+      "Brain failed to load";
 
-    send.disabled = true;
+    addMessage(
+      "I couldn't load my neural model. " +
+      "The model files may not have been built yet.",
+      "ai"
+    );
+
   }
-}
-
-
-/* =========================================================
-   TOKENIZER
-   ========================================================= */
-
-function tokenize(text){
-
-  return text
-    .toLowerCase()
-    .match(/[a-zA-Z0-9']+|[.,!?;:]/g) || [];
 
 }
 
 
-/* =========================================================
-   DETOKENIZER
-   ========================================================= */
+/* ============================================================
+   SOFTMAX
+   ============================================================ */
 
-function detokenize(tokens){
+function softmax(values){
 
-  let text = "";
+  let max =
+    Math.max(...values);
 
-  const punctuation =
-    new Set([
-      ".",
-      ",",
-      "!",
-      "?",
-      ";",
-      ":"
-    ]);
+  let exponentials =
+    values.map(
+      value =>
+        Math.exp(value - max)
+    );
 
-  for(const token of tokens){
+  let sum =
+    exponentials.reduce(
+      (a,b) => a + b,
+      0
+    );
 
-    if(!text){
+  return exponentials.map(
+    value =>
+      value / sum
+  );
 
-      text = token;
+}
 
-    }else if(punctuation.has(token)){
 
-      text += token;
+/* ============================================================
+   RANDOM SAMPLE
+   ============================================================ */
 
-    }else{
+function sample(probabilities){
 
-      text += " " + token;
+  let random =
+    Math.random();
+
+  let cumulative = 0;
+
+  for(
+    let i = 0;
+    i < probabilities.length;
+    i++
+  ){
+
+    cumulative +=
+      probabilities[i];
+
+    if(random <= cumulative){
+
+      return i;
 
     }
 
   }
 
-  return text;
+  return probabilities.length - 1;
+
 }
 
 
-/* =========================================================
-   CHOOSE RELATED WORD
-   ========================================================= */
+/* ============================================================
+   TOP-K SAMPLING
+   ============================================================ */
 
-function chooseNextWord(currentWord){
+function topKSample(logits){
 
-  if(!model || !model.associations){
-    return null;
-  }
+  const indexed =
+    logits.map(
+      (value,index) => ({
+        value,
+        index
+      })
+    );
 
-  const choices =
-    model.associations[currentWord];
 
-  if(!choices || choices.length === 0){
+  indexed.sort(
+    (a,b) =>
+      b.value - a.value
+  );
 
-    return null;
 
-  }
+  const selected =
+    indexed.slice(
+      0,
+      Math.min(
+        TOP_K,
+        indexed.length
+      )
+    );
 
-  const random = Math.random();
 
-  let total = 0;
+  const values =
+    selected.map(
+      item =>
+        item.value / TEMPERATURE
+    );
 
-  for(const item of choices){
 
-    total += item[1];
+  const probabilities =
+    softmax(values);
 
-    if(random <= total){
 
-      return item[0];
+  const selectedIndex =
+    sample(probabilities);
 
-    }
 
-  }
+  return selected[
+    selectedIndex
+  ].index;
 
-  return choices[choices.length - 1][0];
 }
 
 
-/* =========================================================
-   FIND STARTING WORD
-   ========================================================= */
+/* ============================================================
+   MODEL PREDICTION
+   ============================================================ */
 
-function findStartingWord(question){
+async function predict(inputIds){
 
-  const words = tokenize(question);
+  const sequenceLength =
+    inputIds.length;
+
+
+  const tensor =
+    new ort.Tensor(
+      "int64",
+      BigInt64Array.from(
+        inputIds.map(
+          Number
+        )
+      ),
+      [
+        1,
+        sequenceLength
+      ]
+    );
+
+
+  const results =
+    await session.run({
+      input_ids: tensor
+    });
+
+
+  const output =
+    results.logits;
+
+
+  /*
+    logits shape:
+
+    [batch, sequence, vocabulary]
+  */
+
+  const vocabularySize =
+    output.dims[
+      output.dims.length - 1
+    ];
+
+
+  const lastPosition =
+    sequenceLength - 1;
+
+
+  const start =
+    lastPosition *
+    vocabularySize;
+
+
+  return Array.from(
+    output.data.slice(
+      start,
+      start + vocabularySize
+    )
+  );
+
+}
+
+
+/* ============================================================
+   GENERATE TEXT
+   ============================================================ */
+
+async function generateAnswer(question){
+
+  if(!session){
+
+    return "My neural brain isn't ready yet.";
+
+  }
+
+
+  const words =
+    tokenize(question);
+
 
   if(words.length === 0){
 
-    return null;
+    return "Please ask me something.";
 
   }
 
+
+  let ids =
+    words.map(
+      word =>
+        stoi[word] ??
+        stoi[UNK]
+    );
+
+
   /*
-    Try to start from a word that actually exists
-    in the learned model.
+    Remove invalid tokens.
   */
 
-  for(const word of words){
+  ids =
+    ids.filter(
+      id =>
+        Number.isInteger(id)
+    );
+
+
+  if(ids.length === 0){
+
+    return "I don't recognize those words yet.";
+
+  }
+
+
+  /*
+    Limit the prompt length.
+  */
+
+  ids =
+    ids.slice(
+      -MAX_INPUT_TOKENS
+    );
+
+
+  const generated = [];
+
+
+  for(
+    let i = 0;
+    i < MAX_GENERATED_TOKENS;
+    i++
+  ){
+
+    const context =
+      ids.slice(
+        -modelConfig.block_size
+      );
+
+
+    const logits =
+      await predict(context);
+
+
+    const nextId =
+      topKSample(logits);
+
+
+    ids.push(nextId);
+
+
+    const token =
+      itos[String(nextId)];
+
 
     if(
-      model.associations &&
-      model.associations[word]
+      !token ||
+      token === "<PAD>"
     ){
 
-      return word;
+      continue;
 
     }
 
-  }
 
-  return words[words.length - 1];
+    generated.push(token);
 
-}
-
-
-/* =========================================================
-   GENERATE ANSWER
-   ========================================================= */
-
-function generateAnswer(question){
-
-  if(!model){
-
-    return "My brain hasn't loaded yet.";
-
-  }
-
-  const start =
-    findStartingWord(question);
-
-  if(!start){
-
-    return "I don't have enough information to answer that.";
-
-  }
-
-  const result = [start];
-
-  let current = start;
-
-  /*
-    Generate a short response.
-  */
-
-  for(let i = 0; i < 45; i++){
-
-    const next =
-      chooseNextWord(current);
-
-    if(!next){
-
-      break;
-
-    }
-
-    result.push(next);
-
-    current = next;
 
     /*
-      Occasionally stop after punctuation.
+      Stop at natural sentence endings
+      after generating enough text.
     */
 
     if(
-      result.length > 12 &&
-      [".","!","?"].includes(next) &&
-      Math.random() > 0.35
+      generated.length >= 8 &&
+      [".","!","?"].includes(token)
     ){
 
       break;
@@ -413,31 +668,71 @@ function generateAnswer(question){
 
   }
 
-  let answer =
-    detokenize(result);
 
-  /*
-    Capitalize the first character.
-  */
-
-  if(answer.length > 0){
-
-    answer =
-      answer.charAt(0).toUpperCase() +
-      answer.slice(1);
-
-  }
-
-  return answer;
+  return formatTokens(
+    generated
+  );
 
 }
 
 
-/* =========================================================
-   ADD MESSAGE
-   ========================================================= */
+/* ============================================================
+   FORMAT GENERATED TOKENS
+   ============================================================ */
 
-function addMessage(text,type){
+function formatTokens(tokens){
+
+  let result = "";
+
+
+  for(
+    const token of tokens
+  ){
+
+    if(
+      [".",",","!","?",";",":"].includes(token)
+    ){
+
+      result += token;
+
+    }else{
+
+      if(result.length > 0){
+
+        result += " ";
+
+      }
+
+      result += token;
+
+    }
+
+  }
+
+
+  if(result.length === 0){
+
+    return "I couldn't generate an answer.";
+
+  }
+
+
+  return (
+    result.charAt(0).toUpperCase() +
+    result.slice(1)
+  );
+
+}
+
+
+/* ============================================================
+   ADD MESSAGE
+   ============================================================ */
+
+function addMessage(
+  text,
+  type
+){
 
   if(empty){
 
@@ -445,16 +740,25 @@ function addMessage(text,type){
 
   }
 
+
   const message =
-    document.createElement("div");
+    document.createElement(
+      "div"
+    );
+
 
   message.className =
     "message " + type;
 
+
   message.textContent =
     text;
 
-  chat.appendChild(message);
+
+  chat.appendChild(
+    message
+  );
+
 
   chat.scrollTop =
     chat.scrollHeight;
@@ -462,55 +766,77 @@ function addMessage(text,type){
 }
 
 
-/* =========================================================
-   SEND
-   ========================================================= */
+/* ============================================================
+   SEND MESSAGE
+   ============================================================ */
 
-function sendMessage(){
+async function sendMessage(){
 
   const text =
     input.value.trim();
 
-  if(!text || !model){
+
+  if(
+    !text ||
+    !session
+  ){
 
     return;
 
   }
+
 
   addMessage(
     text,
     "user"
   );
 
+
   input.value = "";
 
   input.style.height =
     "auto";
 
+
   send.disabled = true;
 
-  setTimeout(()=>{
+
+  try{
 
     const answer =
-      generateAnswer(text);
+      await generateAnswer(
+        text
+      );
+
 
     addMessage(
       answer,
       "ai"
     );
 
-    send.disabled = false;
 
-    input.focus();
+  }catch(error){
 
-  },100);
+    console.error(error);
+
+    addMessage(
+      "Something went wrong while generating the response.",
+      "ai"
+    );
+
+  }
+
+
+  send.disabled = false;
+
+  input.focus();
 
 }
 
 
-/* =========================================================
+/* ============================================================
    EVENTS
-   ========================================================= */
+   ============================================================ */
 
 send.addEventListener(
   "click",
@@ -539,7 +865,7 @@ input.addEventListener(
 
 input.addEventListener(
   "input",
-  ()=>{
+  () => {
 
     input.style.height =
       "auto";
@@ -554,13 +880,11 @@ input.addEventListener(
 );
 
 
-/* =========================================================
+/* ============================================================
    START
-   ========================================================= */
+   ============================================================ */
 
-send.disabled = true;
-
-loadModel();
+initialize();
 
 </script>
 
