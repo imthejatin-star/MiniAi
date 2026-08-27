@@ -608,7 +608,6 @@ VOCAB_FILE.write_text(
     encoding="utf-8"
 )
 
-
 # ============================================================
 # ONNX EXPORT
 # ============================================================
@@ -616,18 +615,16 @@ VOCAB_FILE.write_text(
 print()
 print("Exporting ONNX model...")
 
-
 model.eval()
 
+# ONNX export uses the model's full context length.
+# The Android app will pad shorter prompts to this size.
+
 dummy_input = torch.zeros(
-    (
-        1,
-        BLOCK_SIZE
-    ),
+    (1, BLOCK_SIZE),
     dtype=torch.long,
     device=DEVICE
 )
-
 
 torch.onnx.export(
     model,
@@ -635,44 +632,10 @@ torch.onnx.export(
     ONNX_FILE,
     input_names=["input_ids"],
     output_names=["logits"],
-    dynamic_axes={
-        "input_ids": {
-            1: "sequence"
-        },
-        "logits": {
-            1: "sequence"
-        }
-    },
     opset_version=17
 )
 
-
-print()
-print("=" * 60)
-print("MINIAI TRAINING COMPLETE")
-print("=" * 60)
-
 print(
-    "PyTorch model:",
-    MODEL_FILE
-)
-
-print(
-    "ONNX model:",
+    "ONNX export complete:",
     ONNX_FILE
-)
-
-print(
-    "Vocabulary:",
-    VOCAB_FILE
-)
-
-print(
-    "Configuration:",
-    CONFIG_FILE
-)
-
-print(
-    "Parameters:",
-    f"{parameters:,}"
 )
