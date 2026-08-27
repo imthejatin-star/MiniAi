@@ -142,6 +142,42 @@ header{
 #send:disabled{
   opacity:.4;
 }
+#studyNav{
+  display:flex;
+  border-bottom:1px solid #1b2230;
+  background:#080b12;
+}
+
+#studyNav button{
+  flex:1;
+  padding:14px;
+  border:0;
+  background:transparent;
+  color:#9ba6b8;
+  font-weight:bold;
+}
+
+#study{
+  flex:1;
+  overflow-y:auto;
+}
+
+.study-card{
+  background:#121925;
+  border:1px solid #1e2838;
+  border-radius:16px;
+  padding:16px;
+  margin:12px 0;
+  line-height:1.55;
+}
+
+#study h1{
+  margin-top:0;
+}
+
+#study h2{
+  margin-top:25px;
+}
 </style>
 </head>
 
@@ -153,7 +189,18 @@ header{
   <div class="logo">MiniAI</div>
   <div class="status" id="status">Loading neural brain...</div>
 </header>
+<nav id="studyNav">
+  <button onclick="showStudySection('chat')">AI</button>
+  <button onclick="showStudySection('study')">Study</button>
+</nav>
 
+<section id="study" style="display:none; padding:20px;">
+
+  <h1 id="studyTitle">Study</h1>
+
+  <div id="studyContent"></div>
+
+</section>
 <main id="chat">
 
   <div class="empty" id="empty">
@@ -929,6 +976,304 @@ async function loadStudyMaterial() {
 }
 
 loadStudyMaterial();
+  function showStudySection(section){
+
+  const chat = document.getElementById("chat");
+  const study = document.getElementById("study");
+  const inputArea = document.querySelector(".input-area");
+
+  if(section === "study"){
+
+    chat.style.display = "none";
+    study.style.display = "block";
+    inputArea.style.display = "none";
+
+    renderStudy();
+
+  }else{
+
+    chat.style.display = "block";
+    study.style.display = "none";
+    inputArea.style.display = "flex";
+
+  }
+
+}
+
+
+function renderStudy(){
+
+  const data =
+    window.MiniAIStudyData;
+
+  const container =
+    document.getElementById("studyContent");
+
+  if(!data){
+
+    container.innerHTML = `
+      <p>
+        No study material has been generated yet.
+      </p>
+    `;
+
+    return;
+
+  }
+
+
+  let html = "";
+
+
+  html += `
+    <h2>Key Points</h2>
+    <div class="study-card">
+  `;
+
+  for(const point of data.key_points || []){
+
+    html += `
+      <p>• ${escapeStudyHTML(point)}</p>
+    `;
+
+  }
+
+  html += `
+    </div>
+
+    <h2>Flashcards</h2>
+  `;
+
+
+  for(const card of data.flashcards || []){
+
+    html += `
+      <div class="study-card">
+        <strong>
+          ${escapeStudyHTML(card.front)}
+        </strong>
+
+        <p>
+          ${escapeStudyHTML(card.back)}
+        </p>
+      </div>
+    `;
+
+  }
+
+
+  html += `
+    <h2>Questions</h2>
+  `;
+
+
+  for(const question of data.questions || []){
+
+    html += `
+      <div class="study-card">
+        <strong>
+          ${escapeStudyHTML(question.question)}
+        </strong>
+
+        <p>
+          ${escapeStudyHTML(question.answer)}
+        </p>
+      </div>
+    `;
+
+  }
+
+
+  html += `
+    <h2>Quiz</h2>
+    <div id="quizContainer"></div>
+  `;
+
+
+  container.innerHTML = html;
+
+  renderQuiz(
+    data.quiz || []
+  );
+
+}
+
+
+function renderQuiz(questions){
+
+  const container =
+    document.getElementById("quizContainer");
+
+  if(!questions.length){
+
+    container.innerHTML =
+      "<p>No quiz questions available.</p>";
+
+    return;
+
+  }
+
+
+  let html = "";
+
+  questions.forEach(
+    (question, index) => {
+
+      html += `
+        <div class="study-card">
+
+          <strong>
+            ${index + 1}.
+            ${escapeStudyHTML(
+              question.question
+            )}
+          </strong>
+      `;
+
+
+      question.options.forEach(
+        option => {
+
+          html += `
+            <label style="
+              display:block;
+              margin:12px 0;
+            ">
+
+              <input
+                type="radio"
+                name="quiz-${index}"
+                value="${escapeAttribute(option)}"
+              >
+
+              ${escapeStudyHTML(option)}
+
+            </label>
+          `;
+
+        }
+      );
+
+
+      html += `
+        </div>
+      `;
+
+    }
+  );
+
+
+  html += `
+    <button
+      onclick="checkQuiz()"
+      style="
+        width:100%;
+        padding:15px;
+        border:0;
+        border-radius:14px;
+        font-weight:bold;
+      "
+    >
+      Check Answers
+    </button>
+
+    <div
+      id="quizResult"
+      style="margin-top:20px;"
+    ></div>
+  `;
+
+
+  container.innerHTML =
+    html;
+
+}
+
+
+function checkQuiz(){
+
+  const data =
+    window.MiniAIStudyData;
+
+  if(!data || !data.quiz){
+
+    return;
+
+  }
+
+
+  let score = 0;
+
+
+  data.quiz.forEach(
+    (question, index) => {
+
+      const selected =
+        document.querySelector(
+          `input[name="quiz-${index}"]:checked`
+        );
+
+
+      if(
+        selected &&
+        selected.value.toLowerCase() ===
+        question.answer.toLowerCase()
+      ){
+
+        score++;
+
+      }
+
+    }
+  );
+
+
+  const result =
+    document.getElementById(
+      "quizResult"
+    );
+
+
+  result.innerHTML = `
+    <div class="study-card">
+      <h2>
+        Score: ${score}/${data.quiz.length}
+      </h2>
+
+      <p>
+        ${
+          score === data.quiz.length
+          ? "Excellent!"
+          : "Review the material and try again."
+        }
+      </p>
+    </div>
+  `;
+
+}
+
+
+function escapeStudyHTML(value){
+
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+}
+
+
+function escapeAttribute(value){
+
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+
+      }
       </script>
 </body>
 </html>
