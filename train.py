@@ -9,33 +9,29 @@ import torch.nn.functional as F
 
 
 # ============================================================
-# MINI AI — TINY GPT-STYLE LANGUAGE MODEL
+# MINI AI — TINY GPT + ONNX EXPORT
 # ============================================================
 
 DATA_FILE = Path("training_data.txt")
 OUTPUT_DIR = Path("www")
+
 MODEL_FILE = OUTPUT_DIR / "model.pt"
+ONNX_FILE = OUTPUT_DIR / "model.onnx"
 VOCAB_FILE = OUTPUT_DIR / "vocab.json"
 
-# ------------------------------------------------------------
-# MODEL SETTINGS
-# ------------------------------------------------------------
+BLOCK_SIZE = 64
 
-BLOCK_SIZE = 128
-
-EMBED_SIZE = 128
+EMBED_SIZE = 64
 NUM_HEADS = 4
-NUM_LAYERS = 4
+NUM_LAYERS = 2
 
-DROPOUT = 0.1
+DROPOUT = 0.0
 
-# Training settings
-BATCH_SIZE = 32
+BATCH_SIZE = 16
 LEARNING_RATE = 3e-4
 EPOCHS = 10
 
-# Maximum vocabulary size
-MAX_VOCAB = 20000
+MAX_VOCAB = 5000
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -45,19 +41,6 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 # ============================================================
 
 def tokenize(text):
-    """
-    Simple tokenizer.
-
-    It separates words and punctuation.
-
-    Example:
-
-        Hello, world!
-
-    becomes:
-
-        ["hello", ",", "world", "!"]
-    """
 
     text = text.lower()
 
@@ -69,58 +52,51 @@ def tokenize(text):
 
 
 # ============================================================
-# LOAD DATA
+# LOAD TRAINING DATA
 # ============================================================
 
 if not DATA_FILE.exists():
-
     raise FileNotFoundError(
         "training_data.txt was not found."
     )
-
 
 text = DATA_FILE.read_text(
     encoding="utf-8"
 )
 
-if len(text.strip()) < 500:
-
-    raise ValueError(
-        "training_data.txt contains too little text."
-    )
-
-
 tokens = tokenize(text)
 
+if len(tokens) <= BLOCK_SIZE + 1:
+    raise ValueError(
+        "training_data.txt is too small. "
+        f"Add more than {BLOCK_SIZE + 1} tokens."
+    )
+
 print("=" * 60)
-print("MINI AI — NEURAL TRAINER")
+print("MINIAI NEURAL TRAINER")
 print("=" * 60)
 
 print("Device:", DEVICE)
-print("Characters:", len(text))
-print("Tokens:", len(tokens))
+print("Training tokens:", len(tokens))
 
 
 # ============================================================
-# BUILD VOCABULARY
+# VOCABULARY
 # ============================================================
+
+counts = {}
+
+for token in tokens:
+    counts[token] = counts.get(token, 0) + 1
+
 
 special_tokens = [
     "<PAD>",
     "<UNK>"
 ]
 
-counts = {}
 
-for token in tokens:
-
-    counts[token] = counts.get(
-        token,
-        0
-    ) + 1
-
-
-sorted_words = sorted(
+sorted_tokens = sorted(
     counts.items(),
     key=lambda x: x[1],
     reverse=True
@@ -128,21 +104,21 @@ sorted_words = sorted(
 
 
 vocabulary = special_tokens + [
-    word
-    for word, count in sorted_words
-    if word not in special_tokens
+    token
+    for token, _ in sorted_tokens
+    if token not in special_tokens
 ][:MAX_VOCAB - len(special_tokens)]
 
 
 stoi = {
-    token: index
-    for index, token in enumerate(vocabulary)
+    token: i
+    for i, token in enumerate(vocabulary)
 }
 
 
 itos = {
-    index: token
-    for token, index in stoi.items()
+    i: token
+    for token, i in stoi.items()
 }
 
 
@@ -155,26 +131,18 @@ encoded = [
 ]
 
 
-print("Vocabulary:", len(vocabulary))
-
-
-# ============================================================
-# DATASET
-# ============================================================
-
 data = torch.tensor(
     encoded,
     dtype=torch.long
 )
 
 
-if len(data) <= BLOCK_SIZE + 1:
+print("Vocabulary:", len(vocabulary))
 
-    raise ValueError(
-        f"Training data must contain more than "
-        f"{BLOCK_SIZE + 1} tokens."
-    )
 
+# ============================================================
+# DATA BATCH
+# ============================================================
 
 def get_batch():
 
@@ -182,7 +150,7 @@ def get_batch():
 
     starts = torch.randint(
         0,
-        max_start,
+        max_start + 1,
         (BATCH_SIZE,)
     )
 
@@ -211,7 +179,7 @@ def get_batch():
 
 
 # ============================================================
-# CAUSAL SELF-ATTENTION
+# ATTENTION
 # ============================================================
 
 class CausalSelfAttention(nn.Module):
@@ -226,11 +194,9 @@ class CausalSelfAttention(nn.Module):
         super().__init__()
 
         if embed_size % num_heads != 0:
-
             raise ValueError(
                 "EMBED_SIZE must be divisible by NUM_HEADS."
             )
-
 
         self.num_heads = num_heads
 
@@ -238,23 +204,15 @@ class CausalSelfAttention(nn.Module):
             embed_size // num_heads
         )
 
-
         self.qkv = nn.Linear(
             embed_size,
             embed_size * 3
         )
 
-
         self.projection = nn.Linear(
             embed_size,
             embed_size
         )
-
-
-        self.dropout = nn.Dropout(
-            DROPOUT
-        )
-
 
         mask = torch.tril(
             torch.ones(
@@ -263,95 +221,73 @@ class CausalSelfAttention(nn.Module):
             )
         )
 
-
         self.register_buffer(
             "mask",
-            mask.view(
-                1,
-                1,
-                block_size,
-                block_size
-            )
+            mask
         )
 
 
     def forward(self, x):
 
-        batch_size, sequence_length, channels = x.shape
+        B, T, C = x.shape
 
-
-        qkv = self.qkv(x)
-
-
-        q, k, v = qkv.chunk(
+        q, k, v = self.qkv(
+            x
+        ).chunk(
             3,
             dim=-1
         )
 
-
         q = q.view(
-            batch_size,
-            sequence_length,
+            B,
+            T,
             self.num_heads,
             self.head_size
         ).transpose(1, 2)
-
 
         k = k.view(
-            batch_size,
-            sequence_length,
+            B,
+            T,
             self.num_heads,
             self.head_size
         ).transpose(1, 2)
-
 
         v = v.view(
-            batch_size,
-            sequence_length,
+            B,
+            T,
             self.num_heads,
             self.head_size
         ).transpose(1, 2)
-
 
         attention = (
             q @ k.transpose(-2, -1)
-        ) / math.sqrt(self.head_size)
-
+        ) / math.sqrt(
+            self.head_size
+        )
 
         attention = attention.masked_fill(
             self.mask[
-                :,
-                :,
-                :sequence_length,
-                :sequence_length
+                :T,
+                :T
             ] == 0,
             float("-inf")
         )
-
 
         attention = F.softmax(
             attention,
             dim=-1
         )
 
-
-        attention = self.dropout(
-            attention
-        )
-
-
         output = attention @ v
-
 
         output = output.transpose(
             1,
             2
         ).contiguous().view(
-            batch_size,
-            sequence_length,
-            channels
+            B,
+            T,
+            C
         )
-
 
         return self.projection(
             output
@@ -359,7 +295,7 @@ class CausalSelfAttention(nn.Module):
 
 
 # ============================================================
-# FEED FORWARD NETWORK
+# FEED FORWARD
 # ============================================================
 
 class FeedForward(nn.Module):
@@ -368,7 +304,7 @@ class FeedForward(nn.Module):
 
         super().__init__()
 
-        self.network = nn.Sequential(
+        self.net = nn.Sequential(
 
             nn.Linear(
                 embed_size,
@@ -380,17 +316,13 @@ class FeedForward(nn.Module):
             nn.Linear(
                 embed_size * 4,
                 embed_size
-            ),
-
-            nn.Dropout(
-                DROPOUT
             )
         )
 
 
     def forward(self, x):
 
-        return self.network(x)
+        return self.net(x)
 
 
 # ============================================================
@@ -422,7 +354,7 @@ class TransformerBlock(nn.Module):
             embed_size
         )
 
-        self.feed_forward = FeedForward(
+        self.feedforward = FeedForward(
             embed_size
         )
 
@@ -433,7 +365,7 @@ class TransformerBlock(nn.Module):
             self.norm1(x)
         )
 
-        x = x + self.feed_forward(
+        x = x + self.feedforward(
             self.norm2(x)
         )
 
@@ -441,7 +373,7 @@ class TransformerBlock(nn.Module):
 
 
 # ============================================================
-# TINY GPT
+# MINI GPT
 # ============================================================
 
 class MiniGPT(nn.Module):
@@ -457,18 +389,15 @@ class MiniGPT(nn.Module):
 
         super().__init__()
 
-
         self.token_embedding = nn.Embedding(
             vocab_size,
             embed_size
         )
 
-
         self.position_embedding = nn.Embedding(
             block_size,
             embed_size
         )
-
 
         self.blocks = nn.ModuleList(
             [
@@ -481,11 +410,9 @@ class MiniGPT(nn.Module):
             ]
         )
 
-
-        self.final_norm = nn.LayerNorm(
+        self.norm = nn.LayerNorm(
             embed_size
         )
-
 
         self.output = nn.Linear(
             embed_size,
@@ -493,78 +420,17 @@ class MiniGPT(nn.Module):
             bias=False
         )
 
-
-        # Weight tying:
-        # input and output embeddings share weights.
-
-        self.output.weight = (
-            self.token_embedding.weight
-        )
-
-
         self.block_size = block_size
 
 
-        self.apply(
-            self._initialize_weights
-        )
+    def forward(self, index):
 
-
-    def _initialize_weights(self, module):
-
-        if isinstance(
-            module,
-            nn.Linear
-        ):
-
-            nn.init.normal_(
-                module.weight,
-                mean=0.0,
-                std=0.02
-            )
-
-            if module.bias is not None:
-
-                nn.init.zeros_(
-                    module.bias
-                )
-
-
-        elif isinstance(
-            module,
-            nn.Embedding
-        ):
-
-            nn.init.normal_(
-                module.weight,
-                mean=0.0,
-                std=0.02
-            )
-
-
-    def forward(
-        self,
-        index,
-        targets=None
-    ):
-
-        batch_size, sequence_length = (
-            index.shape
-        )
-
-
-        if sequence_length > self.block_size:
-
-            raise ValueError(
-                "Sequence is longer than BLOCK_SIZE."
-            )
-
+        B, T = index.shape
 
         positions = torch.arange(
-            sequence_length,
+            T,
             device=index.device
         )
-
 
         x = (
             self.token_embedding(index)
@@ -574,36 +440,14 @@ class MiniGPT(nn.Module):
             )
         )
 
-
         for block in self.blocks:
-
             x = block(x)
 
-
-        x = self.final_norm(x)
-
+        x = self.norm(x)
 
         logits = self.output(x)
 
-
-        loss = None
-
-
-        if targets is not None:
-
-            loss = F.cross_entropy(
-                logits.reshape(
-                    -1,
-                    logits.size(-1)
-                ),
-
-                targets.reshape(
-                    -1
-                )
-            )
-
-
-        return logits, loss
+        return logits
 
 
 # ============================================================
@@ -619,20 +463,20 @@ model = MiniGPT(
 ).to(DEVICE)
 
 
-parameter_count = sum(
-    parameter.numel()
-    for parameter in model.parameters()
+parameters = sum(
+    p.numel()
+    for p in model.parameters()
 )
 
 
 print(
     "Parameters:",
-    f"{parameter_count:,}"
+    f"{parameters:,}"
 )
 
 
 # ============================================================
-# OPTIMIZER
+# TRAIN
 # ============================================================
 
 optimizer = torch.optim.AdamW(
@@ -641,31 +485,23 @@ optimizer = torch.optim.AdamW(
 )
 
 
-# ============================================================
-# TRAIN
-# ============================================================
-
-print()
-print("=" * 60)
-print("TRAINING")
-print("=" * 60)
-
-
 model.train()
 
 
 steps_per_epoch = max(
     1,
-    len(data) // (
-        BLOCK_SIZE * BATCH_SIZE
-    )
+    len(data) //
+    (BLOCK_SIZE * BATCH_SIZE)
 )
+
+
+print()
+print("Starting training...")
 
 
 for epoch in range(EPOCHS):
 
     total_loss = 0.0
-
 
     for step in range(
         steps_per_epoch
@@ -673,49 +509,30 @@ for epoch in range(EPOCHS):
 
         x, y = get_batch()
 
-
         optimizer.zero_grad(
             set_to_none=True
         )
 
+        logits = model(x)
 
-        logits, loss = model(
-            x,
-            y
+        loss = F.cross_entropy(
+            logits.reshape(
+                -1,
+                logits.size(-1)
+            ),
+            y.reshape(-1)
         )
 
-
         loss.backward()
-
 
         torch.nn.utils.clip_grad_norm_(
             model.parameters(),
             1.0
         )
 
-
         optimizer.step()
 
-
         total_loss += loss.item()
-
-
-        if (
-            step == 0
-            or
-            (step + 1)
-            % max(
-                1,
-                steps_per_epoch // 5
-            )
-            == 0
-        ):
-
-            print(
-                f"Epoch {epoch + 1}/{EPOCHS} "
-                f"| Step {step + 1}/{steps_per_epoch} "
-                f"| Loss {loss.item():.4f}"
-            )
 
 
     average_loss = (
@@ -723,16 +540,14 @@ for epoch in range(EPOCHS):
         steps_per_epoch
     )
 
-
     print(
-        f"Epoch {epoch + 1} complete "
-        f"| Average loss: "
-        f"{average_loss:.4f}"
+        f"Epoch {epoch + 1}/{EPOCHS} "
+        f"Loss: {average_loss:.4f}"
     )
 
 
 # ============================================================
-# SAVE MODEL
+# SAVE PYTORCH MODEL
 # ============================================================
 
 OUTPUT_DIR.mkdir(
@@ -766,8 +581,8 @@ VOCAB_FILE.write_text(
         {
             "stoi": stoi,
             "itos": {
-                str(index): token
-                for index, token in itos.items()
+                str(i): token
+                for i, token in itos.items()
             }
         },
         ensure_ascii=False
@@ -776,14 +591,57 @@ VOCAB_FILE.write_text(
 )
 
 
+# ============================================================
+# ONNX EXPORT
+# ============================================================
+
+print()
+print("Exporting ONNX model...")
+
+
+model.eval()
+
+dummy_input = torch.zeros(
+    (
+        1,
+        BLOCK_SIZE
+    ),
+    dtype=torch.long,
+    device=DEVICE
+)
+
+
+torch.onnx.export(
+    model,
+    dummy_input,
+    ONNX_FILE,
+    input_names=["input_ids"],
+    output_names=["logits"],
+    dynamic_axes={
+        "input_ids": {
+            1: "sequence"
+        },
+        "logits": {
+            1: "sequence"
+        }
+    },
+    opset_version=17
+)
+
+
 print()
 print("=" * 60)
-print("TRAINING COMPLETE")
+print("MINIAI TRAINING COMPLETE")
 print("=" * 60)
 
 print(
-    "Model:",
+    "PyTorch model:",
     MODEL_FILE
+)
+
+print(
+    "ONNX model:",
+    ONNX_FILE
 )
 
 print(
@@ -793,10 +651,5 @@ print(
 
 print(
     "Parameters:",
-    f"{parameter_count:,}"
-)
-
-print()
-print(
-    "The neural model has been trained."
+    f"{parameters:,}"
 )
