@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <meta name="theme-color" content="#080b12">
-<title>MiniAI</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>MiniAI Study</title>
 
 <script src="ort.min.js"></script>
 
@@ -14,12 +16,29 @@
   -webkit-tap-highlight-color:transparent;
 }
 
+html,
 body{
   margin:0;
+  padding:0;
+  width:100%;
+  min-height:100%;
   background:#080b12;
   color:#f5f7fb;
   font-family:Arial,sans-serif;
+}
+
+body{
   min-height:100vh;
+}
+
+button,
+textarea,
+input{
+  font:inherit;
+}
+
+button{
+  cursor:pointer;
 }
 
 .app{
@@ -29,6 +48,7 @@ body{
   min-height:100vh;
   display:flex;
   flex-direction:column;
+  background:#080b12;
 }
 
 header{
@@ -39,12 +59,36 @@ header{
 .logo{
   font-size:25px;
   font-weight:800;
+  letter-spacing:-.5px;
 }
 
 .status{
   margin-top:6px;
   color:#8d97a8;
   font-size:13px;
+}
+
+#studyNav{
+  display:flex;
+  border-bottom:1px solid #1b2230;
+  background:#080b12;
+  position:sticky;
+  top:0;
+  z-index:20;
+}
+
+#studyNav button{
+  flex:1;
+  padding:15px;
+  border:0;
+  background:transparent;
+  color:#9ba6b8;
+  font-size:14px;
+  font-weight:700;
+}
+
+#studyNav button:active{
+  background:#121925;
 }
 
 #chat{
@@ -76,7 +120,6 @@ header{
 }
 
 .empty{
-  height:100%;
   min-height:55vh;
   display:flex;
   align-items:center;
@@ -142,24 +185,11 @@ header{
 #send:disabled{
   opacity:.4;
 }
-#studyNav{
-  display:flex;
-  border-bottom:1px solid #1b2230;
-  background:#080b12;
-}
-
-#studyNav button{
-  flex:1;
-  padding:14px;
-  border:0;
-  background:transparent;
-  color:#9ba6b8;
-  font-weight:bold;
-}
 
 #study{
   flex:1;
   overflow-y:auto;
+  padding:20px 20px 40px;
 }
 
 .study-card{
@@ -172,11 +202,56 @@ header{
 }
 
 #study h1{
-  margin-top:0;
+  margin:0 0 20px;
+  font-size:26px;
 }
 
 #study h2{
-  margin-top:25px;
+  margin:25px 0 10px;
+  font-size:19px;
+}
+
+#studyContent p{
+  color:#c6cedb;
+}
+
+.quiz-option{
+  display:block;
+  padding:12px;
+  margin:8px 0;
+  border:1px solid #273246;
+  border-radius:12px;
+}
+
+.quiz-option:active{
+  background:#182131;
+}
+
+.quiz-option input{
+  margin-right:8px;
+}
+
+.quiz-button{
+  width:100%;
+  padding:15px;
+  border:0;
+  border-radius:14px;
+  background:#f5f7fb;
+  color:#080b12;
+  font-weight:bold;
+  margin-top:10px;
+}
+
+.study-error{
+  color:#9ba6b8;
+  text-align:center;
+  padding:30px 10px;
+}
+
+.loading{
+  color:#8d97a8;
+  text-align:center;
+  padding:30px;
 }
 </style>
 </head>
@@ -186,34 +261,62 @@ header{
 <div class="app">
 
 <header>
-  <div class="logo">MiniAI</div>
-  <div class="status" id="status">Loading neural brain...</div>
+  <div class="logo">MiniAI Study</div>
+  <div class="status" id="status">
+    Loading...
+  </div>
 </header>
+
 <nav id="studyNav">
-  <button onclick="showStudySection('chat')">AI</button>
-  <button onclick="showStudySection('study')">Study</button>
+
+  <button onclick="showStudySection('chat')">
+    AI
+  </button>
+
+  <button onclick="showStudySection('study')">
+    Study
+  </button>
+
 </nav>
 
-<section id="study" style="display:none; padding:20px;">
-
-  <h1 id="studyTitle">Study</h1>
-
-  <div id="studyContent"></div>
-
-</section>
 <main id="chat">
 
   <div class="empty" id="empty">
+
     <div>
+
       <h1>MiniAI</h1>
+
       <p>
-        A tiny neural language model<br>
-        running locally on your device.
+        Your personal study assistant.
+        <br>
+        Ask questions or open Study Mode.
       </p>
+
     </div>
+
   </div>
 
 </main>
+
+<section
+  id="study"
+  style="display:none;"
+>
+
+  <h1 id="studyTitle">
+    Study
+  </h1>
+
+  <div id="studyContent">
+
+    <div class="loading">
+      Loading study material...
+    </div>
+
+  </div>
+
+</section>
 
 <div class="input-area">
 
@@ -223,7 +326,12 @@ header{
     placeholder="Ask MiniAI something..."
   ></textarea>
 
-  <button id="send" disabled>↑</button>
+  <button
+    id="send"
+    disabled
+  >
+    ↑
+  </button>
 
 </div>
 
@@ -232,29 +340,37 @@ header{
 <script>
 
 let session = null;
+
 let stoi = {};
+
 let itos = {};
+
 let modelConfig = null;
-
-const chat = document.getElementById("chat");
-const input = document.getElementById("input");
-const send = document.getElementById("send");
-const statusText = document.getElementById("status");
-const empty = document.getElementById("empty");
-
-
-/* ============================================================
-   CONFIG
-   ============================================================ */
 
 const UNK = "<UNK>";
 
 const MAX_INPUT_TOKENS = 48;
+
 const MAX_GENERATED_TOKENS = 60;
 
 const TEMPERATURE = 0.85;
 
 const TOP_K = 20;
+
+let chat =
+  document.getElementById("chat");
+
+let input =
+  document.getElementById("input");
+
+let send =
+  document.getElementById("send");
+
+let statusText =
+  document.getElementById("status");
+
+let empty =
+  document.getElementById("empty");
 
 
 /* ============================================================
@@ -300,48 +416,10 @@ async function loadVocabulary(){
 
 
 /* ============================================================
-   LOAD MODEL
-   ============================================================ */
-
-async function loadModel(){
-
-  if(typeof ort === "undefined"){
-
-    throw new Error(
-      "ONNX Runtime failed to load."
-    );
-
-  }
-
-  /*
-    Keep WASM files next to the application.
-  */
-
-  ort.env.wasm.wasmPaths = "./";
-
-  session =
-    await ort.InferenceSession.create(
-      "model.onnx",
-      {
-        executionProviders: ["wasm"],
-        graphOptimizationLevel: "all"
-      }
-    );
-
-}
-
-
-/* ============================================================
    LOAD CONFIG
    ============================================================ */
 
 async function loadConfig(){
-
-  /*
-    The model configuration is stored
-    separately so the browser knows
-    the model context length.
-  */
 
   const response =
     await fetch("model_config.json");
@@ -361,6 +439,90 @@ async function loadConfig(){
 
 
 /* ============================================================
+   LOAD MODEL
+   ============================================================ */
+
+async function loadModel(){
+
+  if(typeof ort === "undefined"){
+
+    throw new Error(
+      "ONNX Runtime failed to load."
+    );
+
+  }
+
+  ort.env.wasm.wasmPaths = "./";
+
+  session =
+    await ort.InferenceSession.create(
+      "model.onnx",
+      {
+        executionProviders:["wasm"],
+        graphOptimizationLevel:"all"
+      }
+    );
+
+}
+
+
+/* ============================================================
+   LOAD STUDY DATA
+   ============================================================ */
+
+async function loadStudyMaterial(){
+
+  try{
+
+    const response =
+      await fetch(
+        "study_data.json"
+      );
+
+    if(!response.ok){
+
+      throw new Error(
+        "Study data unavailable."
+      );
+
+    }
+
+    const data =
+      await response.json();
+
+    window.MiniAIStudyData =
+      data;
+
+    if(
+      document.getElementById(
+        "study"
+      ).style.display !== "none"
+    ){
+
+      renderStudy();
+
+    }
+
+    return data;
+
+  }catch(error){
+
+    console.log(
+      "Study data unavailable:",
+      error
+    );
+
+    window.MiniAIStudyData =
+      null;
+
+    return null;
+
+  }
+
+}
+
+
+/* ============================================================
    INITIALIZE
    ============================================================ */
 
@@ -373,7 +535,6 @@ async function initialize(){
 
     await loadVocabulary();
 
-
     statusText.textContent =
       "Loading neural brain...";
 
@@ -381,21 +542,19 @@ async function initialize(){
 
     await loadModel();
 
+    await loadStudyMaterial();
 
     const vocabularySize =
       Object.keys(stoi).length;
 
-
     statusText.textContent =
-      "Neural brain ready • " +
+      "Brain ready • " +
       vocabularySize.toLocaleString() +
       " tokens";
-
 
     send.disabled = false;
 
     input.focus();
-
 
   }catch(error){
 
@@ -404,9 +563,10 @@ async function initialize(){
     statusText.textContent =
       "Brain failed to load";
 
+    await loadStudyMaterial();
+
     addMessage(
-      "I couldn't load my neural model. " +
-      "The model files may not have been built yet.",
+      "The study system is available, but the neural model could not be loaded.",
       "ai"
     );
 
@@ -421,16 +581,18 @@ async function initialize(){
 
 function softmax(values){
 
-  let max =
+  const max =
     Math.max(...values);
 
-  let exponentials =
+  const exponentials =
     values.map(
       value =>
-        Math.exp(value - max)
+        Math.exp(
+          value - max
+        )
     );
 
-  let sum =
+  const sum =
     exponentials.reduce(
       (a,b) => a + b,
       0
@@ -450,7 +612,7 @@ function softmax(values){
 
 function sample(probabilities){
 
-  let random =
+  const random =
     Math.random();
 
   let cumulative = 0;
@@ -464,7 +626,9 @@ function sample(probabilities){
     cumulative +=
       probabilities[i];
 
-    if(random <= cumulative){
+    if(
+      random <= cumulative
+    ){
 
       return i;
 
@@ -478,7 +642,7 @@ function sample(probabilities){
 
 
 /* ============================================================
-   TOP-K SAMPLING
+   TOP-K SAMPLE
    ============================================================ */
 
 function topKSample(logits){
@@ -491,12 +655,10 @@ function topKSample(logits){
       })
     );
 
-
   indexed.sort(
     (a,b) =>
       b.value - a.value
   );
-
 
   const selected =
     indexed.slice(
@@ -507,21 +669,18 @@ function topKSample(logits){
       )
     );
 
-
   const values =
     selected.map(
       item =>
-        item.value / TEMPERATURE
+        item.value /
+        TEMPERATURE
     );
-
 
   const probabilities =
     softmax(values);
 
-
   const selectedIndex =
     sample(probabilities);
-
 
   return selected[
     selectedIndex
@@ -534,42 +693,49 @@ function topKSample(logits){
    MODEL PREDICTION
    ============================================================ */
 
-
-  async function predict(inputIds){
+async function predict(inputIds){
 
   if(!session){
-    throw new Error("Model is not loaded.");
+
+    throw new Error(
+      "Model is not loaded."
+    );
+
   }
 
   const blockSize =
-    Number(modelConfig.block_size);
+    Number(
+      modelConfig.block_size
+    );
 
   const unkId =
-    Number(stoi["<UNK>"] ?? 1);
-
-  /*
-    Keep only the most recent tokens.
-  */
+    Number(
+      stoi["<UNK>"] ?? 1
+    );
 
   let context =
-    inputIds.slice(-blockSize);
+    inputIds.slice(
+      -blockSize
+    );
 
-  /*
-    Pad the beginning of the sequence.
-
-    The model always receives exactly
-    BLOCK_SIZE tokens.
-  */
-
-  if(context.length < blockSize){
+  if(
+    context.length <
+    blockSize
+  ){
 
     const padding =
       new Array(
-        blockSize - context.length
-      ).fill(unkId);
+        blockSize -
+        context.length
+      ).fill(
+        unkId
+      );
 
     context =
-      padding.concat(context);
+      padding.concat(
+        context
+      );
+
   }
 
   const tensor =
@@ -587,7 +753,8 @@ function topKSample(logits){
 
   const results =
     await session.run({
-      input_ids: tensor
+      input_ids:
+        tensor
     });
 
   const output =
@@ -598,28 +765,26 @@ function topKSample(logits){
       output.dims.length - 1
     ];
 
-  /*
-    We want the prediction at the
-    final position of the sequence.
-  */
-
   const lastPosition =
     blockSize - 1;
 
   const start =
-    lastPosition * vocabularySize;
+    lastPosition *
+    vocabularySize;
 
   return Array.from(
     output.data.slice(
       start,
-      start + vocabularySize
+      start +
+      vocabularySize
     )
   );
-  }
+
+}
 
 
 /* ============================================================
-   GENERATE TEXT
+   GENERATE ANSWER
    ============================================================ */
 
 async function generateAnswer(question){
@@ -630,17 +795,14 @@ async function generateAnswer(question){
 
   }
 
-
   const words =
     tokenize(question);
 
-
-  if(words.length === 0){
+  if(!words.length){
 
     return "Please ask me something.";
 
   }
-
 
   let ids =
     words.map(
@@ -649,37 +811,24 @@ async function generateAnswer(question){
         stoi[UNK]
     );
 
-
-  /*
-    Remove invalid tokens.
-  */
-
   ids =
     ids.filter(
       id =>
         Number.isInteger(id)
     );
 
-
-  if(ids.length === 0){
+  if(!ids.length){
 
     return "I don't recognize those words yet.";
 
   }
-
-
-  /*
-    Limit the prompt length.
-  */
 
   ids =
     ids.slice(
       -MAX_INPUT_TOKENS
     );
 
-
   const generated = [];
-
 
   for(
     let i = 0;
@@ -687,20 +836,22 @@ async function generateAnswer(question){
     i++
   ){
 
-  
-const logits =
-  await predict(ids);
+    const logits =
+      await predict(
+        ids
+      );
 
     const nextId =
-      topKSample(logits);
+      topKSample(
+        logits
+      );
 
-
-    ids.push(nextId);
-
+    ids.push(
+      nextId
+    );
 
     const token =
       itos[String(nextId)];
-
 
     if(
       !token ||
@@ -711,18 +862,17 @@ const logits =
 
     }
 
-
-    generated.push(token);
-
-
-    /*
-      Stop at natural sentence endings
-      after generating enough text.
-    */
+    generated.push(
+      token
+    );
 
     if(
       generated.length >= 8 &&
-      [".","!","?"].includes(token)
+      [
+        ".",
+        "!",
+        "?"
+      ].includes(token)
     ){
 
       break;
@@ -730,7 +880,6 @@ const logits =
     }
 
   }
-
 
   return formatTokens(
     generated
@@ -740,27 +889,33 @@ const logits =
 
 
 /* ============================================================
-   FORMAT GENERATED TOKENS
+   FORMAT TOKENS
    ============================================================ */
 
 function formatTokens(tokens){
 
   let result = "";
 
-
   for(
     const token of tokens
   ){
 
     if(
-      [".",",","!","?",";",":"].includes(token)
+      [
+        ".",
+        ",",
+        "!",
+        "?",
+        ";",
+        ":"
+      ].includes(token)
     ){
 
       result += token;
 
     }else{
 
-      if(result.length > 0){
+      if(result.length){
 
         result += " ";
 
@@ -772,13 +927,11 @@ function formatTokens(tokens){
 
   }
 
-
-  if(result.length === 0){
+  if(!result.length){
 
     return "I couldn't generate an answer.";
 
   }
-
 
   return (
     result.charAt(0).toUpperCase() +
@@ -789,7 +942,7 @@ function formatTokens(tokens){
 
 
 /* ============================================================
-   ADD MESSAGE
+   ADD CHAT MESSAGE
    ============================================================ */
 
 function addMessage(
@@ -801,27 +954,24 @@ function addMessage(
 
     empty.remove();
 
-  }
+    empty = null;
 
+  }
 
   const message =
     document.createElement(
       "div"
     );
 
-
   message.className =
     "message " + type;
-
 
   message.textContent =
     text;
 
-
   chat.appendChild(
     message
   );
-
 
   chat.scrollTop =
     chat.scrollHeight;
@@ -838,7 +988,6 @@ async function sendMessage(){
   const text =
     input.value.trim();
 
-
   if(
     !text ||
     !session
@@ -848,21 +997,17 @@ async function sendMessage(){
 
   }
 
-
   addMessage(
     text,
     "user"
   );
-
 
   input.value = "";
 
   input.style.height =
     "auto";
 
-
   send.disabled = true;
-
 
   try{
 
@@ -871,16 +1016,16 @@ async function sendMessage(){
         text
       );
 
-
     addMessage(
       answer,
       "ai"
     );
 
-
   }catch(error){
 
-    console.error(error);
+    console.error(
+      error
+    );
 
     addMessage(
       "Something went wrong while generating the response.",
@@ -889,10 +1034,497 @@ async function sendMessage(){
 
   }
 
-
   send.disabled = false;
 
   input.focus();
+
+}
+
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+
+function showStudySection(section){
+
+  const study =
+    document.getElementById(
+      "study"
+    );
+
+  const inputArea =
+    document.querySelector(
+      ".input-area"
+    );
+
+  if(section === "study"){
+
+    chat.style.display =
+      "none";
+
+    study.style.display =
+      "block";
+
+    inputArea.style.display =
+      "none";
+
+    renderStudy();
+
+  }else{
+
+    chat.style.display =
+      "block";
+
+    study.style.display =
+      "none";
+
+    inputArea.style.display =
+      "flex";
+
+  }
+
+}
+
+
+/* ============================================================
+   RENDER STUDY
+   ============================================================ */
+
+function renderStudy(){
+
+  const data =
+    window.MiniAIStudyData;
+
+  const title =
+    document.getElementById(
+      "studyTitle"
+    );
+
+  const container =
+    document.getElementById(
+      "studyContent"
+    );
+
+  if(!data){
+
+    title.textContent =
+      "Study";
+
+    container.innerHTML = `
+      <div class="study-error">
+        No study material is available yet.
+        <br><br>
+        Add material to study_input.txt
+        and let GitHub generate the study data.
+      </div>
+    `;
+
+    return;
+
+  }
+
+  title.textContent =
+    data.title ||
+    "Study";
+
+
+  let html = "";
+
+
+  /* KEY POINTS */
+
+  html += `
+    <h2>Key Points</h2>
+  `;
+
+  if(
+    data.key_points &&
+    data.key_points.length
+  ){
+
+    html += `
+      <div class="study-card">
+    `;
+
+    for(
+      const point of data.key_points
+    ){
+
+      html += `
+        <p>
+          • ${escapeStudyHTML(point)}
+        </p>
+      `;
+
+    }
+
+    html += `
+      </div>
+    `;
+
+  }else{
+
+    html += `
+      <div class="study-card">
+        <p>No key points available.</p>
+      </div>
+    `;
+
+  }
+
+
+  /* FLASHCARDS */
+
+  html += `
+    <h2>Flashcards</h2>
+  `;
+
+  if(
+    data.flashcards &&
+    data.flashcards.length
+  ){
+
+    for(
+      const card of data.flashcards
+    ){
+
+      html += `
+        <div class="study-card">
+
+          <strong>
+            ${escapeStudyHTML(
+              card.front
+            )}
+          </strong>
+
+          <p>
+            ${escapeStudyHTML(
+              card.back
+            )}
+          </p>
+
+        </div>
+      `;
+
+    }
+
+  }else{
+
+    html += `
+      <div class="study-card">
+        <p>No flashcards available.</p>
+      </div>
+    `;
+
+  }
+
+
+  /* QUESTIONS */
+
+  html += `
+    <h2>Questions</h2>
+  `;
+
+  if(
+    data.questions &&
+    data.questions.length
+  ){
+
+    for(
+      const question of data.questions
+    ){
+
+      html += `
+        <div class="study-card">
+
+          <strong>
+            ${escapeStudyHTML(
+              question.question
+            )}
+          </strong>
+
+          <p>
+            ${escapeStudyHTML(
+              question.answer
+            )}
+          </p>
+
+        </div>
+      `;
+
+    }
+
+  }else{
+
+    html += `
+      <div class="study-card">
+        <p>No questions available.</p>
+      </div>
+    `;
+
+  }
+
+
+  /* QUIZ */
+
+  html += `
+    <h2>Quiz</h2>
+
+    <div id="quizContainer">
+      <div class="loading">
+        Preparing quiz...
+      </div>
+    </div>
+  `;
+
+  container.innerHTML =
+    html;
+
+  renderQuiz(
+    data.quiz || []
+  );
+
+}
+
+
+/* ============================================================
+   RENDER QUIZ
+   ============================================================ */
+
+function renderQuiz(
+  questions
+){
+
+  const container =
+    document.getElementById(
+      "quizContainer"
+    );
+
+  if(!questions.length){
+
+    container.innerHTML = `
+      <div class="study-card">
+        <p>No quiz questions available.</p>
+      </div>
+    `;
+
+    return;
+
+  }
+
+  let html = "";
+
+  questions.forEach(
+    (question,index) => {
+
+      html += `
+        <div class="study-card">
+
+          <strong>
+            ${index + 1}.
+            ${escapeStudyHTML(
+              question.question
+            )}
+          </strong>
+      `;
+
+      question.options.forEach(
+        option => {
+
+          html += `
+            <label class="quiz-option">
+
+              <input
+                type="radio"
+                name="quiz-${index}"
+                value="${escapeAttribute(
+                  option
+                )}"
+              >
+
+              ${escapeStudyHTML(
+                option
+              )}
+
+            </label>
+          `;
+
+        }
+      );
+
+      html += `
+        </div>
+      `;
+
+    }
+  );
+
+  html += `
+    <button
+      class="quiz-button"
+      onclick="checkQuiz()"
+    >
+      Check Answers
+    </button>
+
+    <div
+      id="quizResult"
+      style="margin-top:20px;"
+    ></div>
+  `;
+
+  container.innerHTML =
+    html;
+
+}
+
+
+/* ============================================================
+   CHECK QUIZ
+   ============================================================ */
+
+function checkQuiz(){
+
+  const data =
+    window.MiniAIStudyData;
+
+  if(
+    !data ||
+    !data.quiz
+  ){
+
+    return;
+
+  }
+
+  let score = 0;
+
+  data.quiz.forEach(
+    (question,index) => {
+
+      const selected =
+        document.querySelector(
+          `input[name="quiz-${index}"]:checked`
+        );
+
+      if(
+        selected &&
+        selected.value.toLowerCase() ===
+        String(
+          question.answer
+        ).toLowerCase()
+      ){
+
+        score++;
+
+      }
+
+    }
+  );
+
+  const result =
+    document.getElementById(
+      "quizResult"
+    );
+
+  const total =
+    data.quiz.length;
+
+  let message =
+    "Review the material and try again.";
+
+  if(score === total){
+
+    message =
+      "Excellent! Perfect score.";
+
+  }else if(
+    score >= total * 0.7
+  ){
+
+    message =
+      "Good work. Review the missed questions.";
+
+  }else if(
+    score >= total * 0.5
+  ){
+
+    message =
+      "You're getting there. Revise once more.";
+
+  }
+
+  result.innerHTML = `
+    <div class="study-card">
+
+      <h2>
+        Score: ${score}/${total}
+      </h2>
+
+      <p>
+        ${message}
+      </p>
+
+    </div>
+  `;
+
+}
+
+
+/* ============================================================
+   HTML SAFETY
+   ============================================================ */
+
+function escapeStudyHTML(
+  value
+){
+
+  return String(value)
+    .replaceAll(
+      "&",
+      "&amp;"
+    )
+    .replaceAll(
+      "<",
+      "&lt;"
+    )
+    .replaceAll(
+      ">",
+      "&gt;"
+    )
+    .replaceAll(
+      '"',
+      "&quot;"
+    )
+    .replaceAll(
+      "'",
+      "&#039;"
+    );
+
+}
+
+
+function escapeAttribute(
+  value
+){
+
+  return String(value)
+    .replaceAll(
+      "&",
+      "&amp;"
+    )
+    .replaceAll(
+      '"',
+      "&quot;"
+    )
+    .replaceAll(
+      "<",
+      "&lt;"
+    )
+    .replaceAll(
+      ">",
+      "&gt;"
+    );
 
 }
 
@@ -905,7 +1537,6 @@ send.addEventListener(
   "click",
   sendMessage
 );
-
 
 input.addEventListener(
   "keydown",
@@ -924,7 +1555,6 @@ input.addEventListener(
 
   }
 );
-
 
 input.addEventListener(
   "input",
@@ -950,330 +1580,6 @@ input.addEventListener(
 initialize();
 
 </script>
-<script>
-async function loadStudyMaterial() {
-    try {
-        const response = await fetch("study_data.json");
 
-        if (!response.ok) {
-            throw new Error("Study data not found");
-        }
-
-        const data = await response.json();
-
-        console.log("Study material loaded:", data);
-
-        /*
-         * The study data is now available to the app.
-         * We will build the actual Study screen next.
-         */
-
-        window.MiniAIStudyData = data;
-
-    } catch (error) {
-        console.log("No study material available yet.");
-    }
-}
-
-loadStudyMaterial();
-  function showStudySection(section){
-
-  const chat = document.getElementById("chat");
-  const study = document.getElementById("study");
-  const inputArea = document.querySelector(".input-area");
-
-  if(section === "study"){
-
-    chat.style.display = "none";
-    study.style.display = "block";
-    inputArea.style.display = "none";
-
-    renderStudy();
-
-  }else{
-
-    chat.style.display = "block";
-    study.style.display = "none";
-    inputArea.style.display = "flex";
-
-  }
-
-}
-
-
-function renderStudy(){
-
-  const data =
-    window.MiniAIStudyData;
-
-  const container =
-    document.getElementById("studyContent");
-
-  if(!data){
-
-    container.innerHTML = `
-      <p>
-        No study material has been generated yet.
-      </p>
-    `;
-
-    return;
-
-  }
-
-
-  let html = "";
-
-
-  html += `
-    <h2>Key Points</h2>
-    <div class="study-card">
-  `;
-
-  for(const point of data.key_points || []){
-
-    html += `
-      <p>• ${escapeStudyHTML(point)}</p>
-    `;
-
-  }
-
-  html += `
-    </div>
-
-    <h2>Flashcards</h2>
-  `;
-
-
-  for(const card of data.flashcards || []){
-
-    html += `
-      <div class="study-card">
-        <strong>
-          ${escapeStudyHTML(card.front)}
-        </strong>
-
-        <p>
-          ${escapeStudyHTML(card.back)}
-        </p>
-      </div>
-    `;
-
-  }
-
-
-  html += `
-    <h2>Questions</h2>
-  `;
-
-
-  for(const question of data.questions || []){
-
-    html += `
-      <div class="study-card">
-        <strong>
-          ${escapeStudyHTML(question.question)}
-        </strong>
-
-        <p>
-          ${escapeStudyHTML(question.answer)}
-        </p>
-      </div>
-    `;
-
-  }
-
-
-  html += `
-    <h2>Quiz</h2>
-    <div id="quizContainer"></div>
-  `;
-
-
-  container.innerHTML = html;
-
-  renderQuiz(
-    data.quiz || []
-  );
-
-}
-
-
-function renderQuiz(questions){
-
-  const container =
-    document.getElementById("quizContainer");
-
-  if(!questions.length){
-
-    container.innerHTML =
-      "<p>No quiz questions available.</p>";
-
-    return;
-
-  }
-
-
-  let html = "";
-
-  questions.forEach(
-    (question, index) => {
-
-      html += `
-        <div class="study-card">
-
-          <strong>
-            ${index + 1}.
-            ${escapeStudyHTML(
-              question.question
-            )}
-          </strong>
-      `;
-
-
-      question.options.forEach(
-        option => {
-
-          html += `
-            <label style="
-              display:block;
-              margin:12px 0;
-            ">
-
-              <input
-                type="radio"
-                name="quiz-${index}"
-                value="${escapeAttribute(option)}"
-              >
-
-              ${escapeStudyHTML(option)}
-
-            </label>
-          `;
-
-        }
-      );
-
-
-      html += `
-        </div>
-      `;
-
-    }
-  );
-
-
-  html += `
-    <button
-      onclick="checkQuiz()"
-      style="
-        width:100%;
-        padding:15px;
-        border:0;
-        border-radius:14px;
-        font-weight:bold;
-      "
-    >
-      Check Answers
-    </button>
-
-    <div
-      id="quizResult"
-      style="margin-top:20px;"
-    ></div>
-  `;
-
-
-  container.innerHTML =
-    html;
-
-}
-
-
-function checkQuiz(){
-
-  const data =
-    window.MiniAIStudyData;
-
-  if(!data || !data.quiz){
-
-    return;
-
-  }
-
-
-  let score = 0;
-
-
-  data.quiz.forEach(
-    (question, index) => {
-
-      const selected =
-        document.querySelector(
-          `input[name="quiz-${index}"]:checked`
-        );
-
-
-      if(
-        selected &&
-        selected.value.toLowerCase() ===
-        question.answer.toLowerCase()
-      ){
-
-        score++;
-
-      }
-
-    }
-  );
-
-
-  const result =
-    document.getElementById(
-      "quizResult"
-    );
-
-
-  result.innerHTML = `
-    <div class="study-card">
-      <h2>
-        Score: ${score}/${data.quiz.length}
-      </h2>
-
-      <p>
-        ${
-          score === data.quiz.length
-          ? "Excellent!"
-          : "Review the material and try again."
-        }
-      </p>
-    </div>
-  `;
-
-}
-
-
-function escapeStudyHTML(value){
-
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-
-}
-
-
-function escapeAttribute(value){
-
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
-
-      }
-      </script>
 </body>
 </html>
