@@ -41,8 +41,12 @@ jobs:
           java-version: 21
 
       - name: Install Node dependencies
-        run: |
-          npm install
+  run: |
+    npm install
+
+      - name: Prepare ONNX Runtime
+      run: |
+      npm run build
 
       - name: Add Android platform
         run: |
