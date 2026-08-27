@@ -1,0 +1,14 @@
+{
+  "name": "miniai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MiniAI Android application",
+  "scripts": {
+    "build": "echo MiniAI build"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.4.0",
+    "@capacitor/cli": "^7.4.0",
+    "@capacitor/core": "^7.4.0"
+  }
+}
