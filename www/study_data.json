@@ -1,21 +1,145 @@
 {
-  "title": "name: Build MiniAI APK",
-  "summary": "on: workflow_dispatch: push: branches: - main jobs: build: runs-on: ubuntu-latest steps: - name: Checkout repository uses: actions/checkout@v4 - name: Setup Python uses: actions/setup-python@v5 with: python-version: \"3.11\" - name: Install Python dependencies run: | python -m pip install --upgrade pip python -m pip install torch onnx onnxruntime onnxscript numpy - name: Train MiniAI run: | python train.py - name: Test ONNX model run: | python test_model.py - name: Setup Node.js uses: actions/setup-node@v4 with: node-version: 22 - name: Install Node dependencies run: | npm install - name: Prepare ONNX Runtime run: | npm run build - name: Setup Java uses: actions/setup-java@v4 with: distribution: temurin java-version: \"21\" - name: Add Android platform run: | npx cap add android - name: Sync Capacitor run: | npx cap sync android - name: Build Android APK working-directory: android run: | chmod +x gradlew ./gradlew assembleDebug - name: Upload APK uses: actions/upload-artifact@v4 with: name: MiniAI-debug-apk path: android/app/build/outputs/apk/debug/app-debug.apk",
+  "title": "MOTION",
+  "summary": "Motion is the change in position of an object with time. An object is said to be in motion when its position changes relative to its surroundings. Distance is the total path length travelled by an object. Displacement is the shortest distance between the initial and final position of an object. Speed is the distance travelled by an object per unit time. Velocity is the displacement of an object per unit time. Acceleration is the rate of change of velocity with time.",
   "key_points": [
-    "on: workflow_dispatch: push: branches: - main jobs: build: runs-on: ubuntu-latest steps: - name: Checkout repository uses: actions/checkout@v4 - name: Setup Python uses: actions/setup-python@v5 with: python-version: \"3.11\" - name: Install Python dependencies run: | python -m pip install --upgrade pip python -m pip install torch onnx onnxruntime onnxscript numpy - name: Train MiniAI run: | python train.py - name: Test ONNX model run: | python test_model.py - name: Setup Node.js uses: actions/setup-node@v4 with: node-version: 22 - name: Install Node dependencies run: | npm install - name: Prepare ONNX Runtime run: | npm run build - name: Setup Java uses: actions/setup-java@v4 with: distribution: temurin java-version: \"21\" - name: Add Android platform run: | npx cap add android - name: Sync Capacitor run: | npx cap sync android - name: Build Android APK working-directory: android run: | chmod +x gradlew ./gradlew assembleDebug - name: Upload APK uses: actions/upload-artifact@v4 with: name: MiniAI-debug-apk path: android/app/build/outputs/apk/debug/app-debug.apk"
+    "Motion is the change in position of an object with time.",
+    "An object is said to be in motion when its position changes relative to its surroundings.",
+    "Distance is the total path length travelled by an object.",
+    "Displacement is the shortest distance between the initial and final position of an object.",
+    "Speed is the distance travelled by an object per unit time.",
+    "Velocity is the displacement of an object per unit time.",
+    "Acceleration is the rate of change of velocity with time."
   ],
-  "flashcards": [],
-  "questions": [],
+  "flashcards": [
+    {
+      "front": "Motion",
+      "back": "the change in position of an object with time."
+    },
+    {
+      "front": "An object",
+      "back": "said to be in motion when its position changes relative to its surroundings."
+    },
+    {
+      "front": "Distance",
+      "back": "the total path length travelled by an object."
+    },
+    {
+      "front": "Displacement",
+      "back": "the shortest distance between the initial and final position of an object."
+    },
+    {
+      "front": "Speed",
+      "back": "the distance travelled by an object per unit time."
+    },
+    {
+      "front": "Velocity",
+      "back": "the displacement of an object per unit time."
+    },
+    {
+      "front": "Acceleration",
+      "back": "the rate of change of velocity with time."
+    }
+  ],
+  "questions": [
+    {
+      "question": "What is Motion?",
+      "answer": "Motion is the change in position of an object with time."
+    },
+    {
+      "question": "What is An object?",
+      "answer": "An object is said to be in motion when its position changes relative to its surroundings."
+    },
+    {
+      "question": "What is Distance?",
+      "answer": "Distance is the total path length travelled by an object."
+    },
+    {
+      "question": "What is Displacement?",
+      "answer": "Displacement is the shortest distance between the initial and final position of an object."
+    },
+    {
+      "question": "What is Speed?",
+      "answer": "Speed is the distance travelled by an object per unit time."
+    },
+    {
+      "question": "What is Velocity?",
+      "answer": "Velocity is the displacement of an object per unit time."
+    },
+    {
+      "question": "What is Acceleration?",
+      "answer": "Acceleration is the rate of change of velocity with time."
+    }
+  ],
   "quiz": [
     {
-      "question": "on:\nworkflow_dispatch:\npush:\nbranches:\n- main\njobs:\nbuild:\nruns-on: ubuntu-latest\nsteps:\n- name: Checkout repository\nuses: actions/checkout@v4\n- name: Setup Python\nuses: actions/setup-python@v5\nwith:\npython-version: \"3.11\"\n- name: Install Python dependencies\nrun: |\npython -m pip install --upgrade pip\npython -m pip install torch onnx onnxruntime onnxscript numpy\n- name: Train MiniAI\nrun: |\npython train.py\n- name: Test ONNX model\nrun: |\npython test_model.py\n- name: Setup Node.js\nuses: actions/setup-node@v4\nwith:\nnode-version: 22\n- name: Install Node dependencies\nrun: |\nnpm install\n- name: Prepare ONNX Runtime\nrun: |\nnpm run build\n- name: Setup Java\nuses: actions/setup-java@v4\nwith:\ndistribution: temurin\njava-version: \"21\"\n- name: Add Android platform\nrun: |\nnpx cap add android\n- name: Sync Capacitor\nrun: |\nnpx cap sync android\n- name: Build Android APK\nworking-directory: android\nrun: |\nchmod +x gradlew\n./gradlew assembleDebug\n- name: Upload APK\nuses: actions/upload-artifact@v4\nwith:\nname: MiniAI-debug-apk\npath: _____",
+      "question": "Motion is the change in position of an object with _____.",
       "options": [
-        "android/app/build/outputs/apk/debug/app-debug.apk",
-        "workflow_dispatch:",
-        "push:",
-        "branches:"
+        "time",
+        "Motion",
+        "change",
+        "position"
       ],
-      "answer": "android/app/build/outputs/apk/debug/app-debug.apk"
+      "answer": "time"
+    },
+    {
+      "question": "An object is said to be in motion when its position changes relative to its _____.",
+      "options": [
+        "surroundings",
+        "Motion",
+        "change",
+        "position"
+      ],
+      "answer": "surroundings"
+    },
+    {
+      "question": "Distance is the total path length travelled by an _____.",
+      "options": [
+        "object",
+        "Motion",
+        "change",
+        "position"
+      ],
+      "answer": "object"
+    },
+    {
+      "question": "Displacement is the shortest distance between the initial and final position of an _____.",
+      "options": [
+        "object",
+        "Motion",
+        "change",
+        "position"
+      ],
+      "answer": "object"
+    },
+    {
+      "question": "Speed is the distance travelled by an object per unit _____.",
+      "options": [
+        "time",
+        "Motion",
+        "change",
+        "position"
+      ],
+      "answer": "time"
+    },
+    {
+      "question": "Velocity is the displacement of an object per unit _____.",
+      "options": [
+        "time",
+        "Motion",
+        "change",
+        "position"
+      ],
+      "answer": "time"
+    },
+    {
+      "question": "Acceleration is the rate of change of velocity with _____.",
+      "options": [
+        "time",
+        "Motion",
+        "change",
+        "position"
+      ],
+      "answer": "time"
     }
   ]
 }
