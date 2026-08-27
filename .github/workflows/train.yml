@@ -1,0 +1,36 @@
+name: Train MiniAI
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "training_data.txt"
+      - "train.py"
+      - ".github/workflows/train.yml"
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+
+      - name: Train MiniAI
+        run: |
+          python train.py
+
+      - name: Save trained model
+        uses: actions/upload-artifact@v4
+        with:
+          name: MiniAI-model
+          path: www/model.json
