@@ -1,0 +1,18 @@
+MiniAI is a small experimental artificial intelligence system.
+An artificial intelligence system is a computer system designed to perform tasks that normally require human intelligence.
+Machine learning is a method where a computer learns patterns from examples.
+A language model learns patterns in language and predicts what text is likely to come next.
+Words have meaning depending on the words around them.
+A sentence is made from words arranged according to the rules of a language.
+Knowledge can be represented using text.
+The Earth is a planet that orbits the Sun.
+The Sun is a star at the center of our solar system.
+Water is a substance made from hydrogen and oxygen.
+Plants use photosynthesis to convert light energy into chemical energy.
+A triangle is a geometric shape with three sides.
+A square has four equal sides and four right angles.
+Python is a programming language commonly used for artificial intelligence and data science.
+Android is a mobile operating system.
+An application is software designed to perform a particular task.
+Learning improves when information is practiced repeatedly.
+Asking a clear question helps produce a more useful answer.
