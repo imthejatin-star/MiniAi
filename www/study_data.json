@@ -1,0 +1,21 @@
+{
+  "title": "name: Build MiniAI APK",
+  "summary": "on: workflow_dispatch: push: branches: - main jobs: build: runs-on: ubuntu-latest steps: - name: Checkout repository uses: actions/checkout@v4 - name: Setup Python uses: actions/setup-python@v5 with: python-version: \"3.11\" - name: Install Python dependencies run: | python -m pip install --upgrade pip python -m pip install torch onnx onnxruntime onnxscript numpy - name: Train MiniAI run: | python train.py - name: Test ONNX model run: | python test_model.py - name: Setup Node.js uses: actions/setup-node@v4 with: node-version: 22 - name: Install Node dependencies run: | npm install - name: Prepare ONNX Runtime run: | npm run build - name: Setup Java uses: actions/setup-java@v4 with: distribution: temurin java-version: \"21\" - name: Add Android platform run: | npx cap add android - name: Sync Capacitor run: | npx cap sync android - name: Build Android APK working-directory: android run: | chmod +x gradlew ./gradlew assembleDebug - name: Upload APK uses: actions/upload-artifact@v4 with: name: MiniAI-debug-apk path: android/app/build/outputs/apk/debug/app-debug.apk",
+  "key_points": [
+    "on: workflow_dispatch: push: branches: - main jobs: build: runs-on: ubuntu-latest steps: - name: Checkout repository uses: actions/checkout@v4 - name: Setup Python uses: actions/setup-python@v5 with: python-version: \"3.11\" - name: Install Python dependencies run: | python -m pip install --upgrade pip python -m pip install torch onnx onnxruntime onnxscript numpy - name: Train MiniAI run: | python train.py - name: Test ONNX model run: | python test_model.py - name: Setup Node.js uses: actions/setup-node@v4 with: node-version: 22 - name: Install Node dependencies run: | npm install - name: Prepare ONNX Runtime run: | npm run build - name: Setup Java uses: actions/setup-java@v4 with: distribution: temurin java-version: \"21\" - name: Add Android platform run: | npx cap add android - name: Sync Capacitor run: | npx cap sync android - name: Build Android APK working-directory: android run: | chmod +x gradlew ./gradlew assembleDebug - name: Upload APK uses: actions/upload-artifact@v4 with: name: MiniAI-debug-apk path: android/app/build/outputs/apk/debug/app-debug.apk"
+  ],
+  "flashcards": [],
+  "questions": [],
+  "quiz": [
+    {
+      "question": "on:\nworkflow_dispatch:\npush:\nbranches:\n- main\njobs:\nbuild:\nruns-on: ubuntu-latest\nsteps:\n- name: Checkout repository\nuses: actions/checkout@v4\n- name: Setup Python\nuses: actions/setup-python@v5\nwith:\npython-version: \"3.11\"\n- name: Install Python dependencies\nrun: |\npython -m pip install --upgrade pip\npython -m pip install torch onnx onnxruntime onnxscript numpy\n- name: Train MiniAI\nrun: |\npython train.py\n- name: Test ONNX model\nrun: |\npython test_model.py\n- name: Setup Node.js\nuses: actions/setup-node@v4\nwith:\nnode-version: 22\n- name: Install Node dependencies\nrun: |\nnpm install\n- name: Prepare ONNX Runtime\nrun: |\nnpm run build\n- name: Setup Java\nuses: actions/setup-java@v4\nwith:\ndistribution: temurin\njava-version: \"21\"\n- name: Add Android platform\nrun: |\nnpx cap add android\n- name: Sync Capacitor\nrun: |\nnpx cap sync android\n- name: Build Android APK\nworking-directory: android\nrun: |\nchmod +x gradlew\n./gradlew assembleDebug\n- name: Upload APK\nuses: actions/upload-artifact@v4\nwith:\nname: MiniAI-debug-apk\npath: _____",
+      "options": [
+        "android/app/build/outputs/apk/debug/app-debug.apk",
+        "workflow_dispatch:",
+        "push:",
+        "branches:"
+      ],
+      "answer": "android/app/build/outputs/apk/debug/app-debug.apk"
+    }
+  ]
+}
