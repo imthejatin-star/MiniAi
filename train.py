@@ -570,7 +570,25 @@ torch.save(
     },
     MODEL_FILE
 )
+# ============================================================
+# SAVE MODEL CONFIGURATION
+# ============================================================
 
+CONFIG_FILE = OUTPUT_DIR / "model_config.json"
+
+CONFIG_FILE.write_text(
+    json.dumps(
+        {
+            "block_size": BLOCK_SIZE,
+            "embed_size": EMBED_SIZE,
+            "num_heads": NUM_HEADS,
+            "num_layers": NUM_LAYERS,
+            "vocab_size": len(vocabulary)
+        },
+        indent=2
+    ),
+    encoding="utf-8"
+)
 
 # ============================================================
 # SAVE VOCABULARY
@@ -647,6 +665,11 @@ print(
 print(
     "Vocabulary:",
     VOCAB_FILE
+)
+
+print(
+    "Configuration:",
+    CONFIG_FILE
 )
 
 print(
