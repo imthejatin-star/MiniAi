@@ -617,23 +617,23 @@ print("Exporting ONNX model...")
 
 model.eval()
 
-# ONNX export uses the model's full context length.
-# The Android app will pad shorter prompts to this size.
-
 dummy_input = torch.zeros(
     (1, BLOCK_SIZE),
     dtype=torch.long,
     device=DEVICE
 )
 
-torch.onnx.export(
-    model,
-    dummy_input,
-    ONNX_FILE,
-    input_names=["input_ids"],
-    output_names=["logits"],
-    opset_version=17
-)
+with torch.no_grad():
+
+    torch.onnx.export(
+        model,
+        dummy_input,
+        ONNX_FILE,
+        input_names=["input_ids"],
+        output_names=["logits"],
+        opset_version=17,
+        dynamo=False
+    )
 
 print(
     "ONNX export complete:",
