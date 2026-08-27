@@ -1,0 +1,6 @@
+{
+  "appId": "com.jatin.miniai",
+  "appName": "MiniAI",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}
