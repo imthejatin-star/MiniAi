@@ -11,7 +11,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -26,30 +25,31 @@ jobs:
           python-version: "3.11"
 
       - name: Install Python dependencies
-   run: |
-    python -m pip install --upgrade pip
-    pip install torch onnx onnxruntime numpy
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch onnx onnxruntime numpy
 
       - name: Train MiniAI
         run: |
           python train.py
+
       - name: Test ONNX model
-  run: |
-    python test_model.py
-    
+        run: |
+          python test_model.py
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: "21"
 
       - name: Install Node dependencies
-  run: |
-    npm install
+        run: |
+          npm install
 
       - name: Prepare ONNX Runtime
-      run: |
-      npm run build
+        run: |
+          npm run build
 
       - name: Add Android platform
         run: |
