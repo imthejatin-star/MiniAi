@@ -4,11 +4,12 @@
   "private": true,
   "description": "MiniAI neural Android application",
   "scripts": {
-    "build": "echo MiniAI build"
+    "build": "mkdir -p www && cp node_modules/onnxruntime-web/dist/ort.min.js www/ort.min.js"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.0",
     "@capacitor/cli": "^7.4.0",
-    "@capacitor/core": "^7.4.0"
+    "@capacitor/core": "^7.4.0",
+    "onnxruntime-web": "^1.24.0"
   }
 }
