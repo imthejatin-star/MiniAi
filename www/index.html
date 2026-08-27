@@ -1,237 +1,567 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
-  <meta name="theme-color" content="#080b12">
-  <title>MiniAI</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="theme-color" content="#080b12">
+<title>MiniAI</title>
 
-  <style>
-    * {
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
+<style>
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
 
-    body {
-      margin: 0;
-      background: #080b12;
-      color: #f5f7fb;
-      font-family: Arial, sans-serif;
-      min-height: 100vh;
-    }
+body{
+  margin:0;
+  background:#080b12;
+  color:#f5f7fb;
+  font-family:Arial,sans-serif;
+  min-height:100vh;
+}
 
-    .app {
-      width: 100%;
-      max-width: 700px;
-      margin: auto;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+.app{
+  width:100%;
+  max-width:700px;
+  margin:auto;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+}
 
-    header {
-      padding: 24px 20px 16px;
-      border-bottom: 1px solid #1b2230;
-    }
+header{
+  padding:24px 20px 16px;
+  border-bottom:1px solid #1b2230;
+}
 
-    .logo {
-      font-size: 25px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-    }
+.logo{
+  font-size:25px;
+  font-weight:800;
+}
 
-    .status {
-      margin-top: 6px;
-      color: #8d97a8;
-      font-size: 13px;
-    }
+.status{
+  margin-top:6px;
+  color:#8d97a8;
+  font-size:13px;
+}
 
-    #chat {
-      flex: 1;
-      padding: 20px;
-      overflow-y: auto;
-    }
+#chat{
+  flex:1;
+  padding:20px;
+  overflow-y:auto;
+}
 
-    .message {
-      max-width: 88%;
-      padding: 13px 15px;
-      margin-bottom: 14px;
-      border-radius: 16px;
-      line-height: 1.5;
-      font-size: 15px;
-      white-space: pre-wrap;
-    }
+.message{
+  max-width:88%;
+  padding:13px 15px;
+  margin-bottom:14px;
+  border-radius:16px;
+  line-height:1.5;
+  font-size:15px;
+  white-space:pre-wrap;
+}
 
-    .ai {
-      background: #121925;
-      border: 1px solid #1e2838;
-      margin-right: auto;
-    }
+.ai{
+  background:#121925;
+  border:1px solid #1e2838;
+  margin-right:auto;
+}
 
-    .user {
-      background: #26344b;
-      margin-left: auto;
-    }
+.user{
+  background:#26344b;
+  margin-left:auto;
+}
 
-    .empty {
-      height: 100%;
-      min-height: 55vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      color: #707b8d;
-      padding: 30px;
-    }
+.empty{
+  height:100%;
+  min-height:55vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  color:#707b8d;
+  padding:30px;
+}
 
-    .empty h1 {
-      color: #e9edf5;
-      font-size: 28px;
-      margin-bottom: 10px;
-    }
+.empty h1{
+  color:#e9edf5;
+  font-size:28px;
+  margin-bottom:10px;
+}
 
-    .empty p {
-      line-height: 1.6;
-    }
+.empty p{
+  line-height:1.6;
+}
 
-    .input-area {
-      padding: 12px 15px calc(12px + env(safe-area-inset-bottom));
-      border-top: 1px solid #1b2230;
-      background: #080b12;
-      display: flex;
-      gap: 9px;
-    }
+.input-area{
+  padding:12px 15px calc(12px + env(safe-area-inset-bottom));
+  border-top:1px solid #1b2230;
+  background:#080b12;
+  display:flex;
+  gap:9px;
+}
 
-    #input {
-      flex: 1;
-      min-width: 0;
-      resize: none;
-      border: 1px solid #263044;
-      outline: none;
-      border-radius: 15px;
-      padding: 13px 14px;
-      background: #111722;
-      color: white;
-      font-size: 15px;
-      font-family: inherit;
-      max-height: 130px;
-    }
+#input{
+  flex:1;
+  min-width:0;
+  resize:none;
+  border:1px solid #263044;
+  outline:none;
+  border-radius:15px;
+  padding:13px 14px;
+  background:#111722;
+  color:white;
+  font-size:15px;
+  font-family:inherit;
+  max-height:130px;
+}
 
-    #input:focus {
-      border-color: #465675;
-    }
+#input:focus{
+  border-color:#465675;
+}
 
-    #send {
-      width: 48px;
-      height: 48px;
-      border: 0;
-      border-radius: 14px;
-      background: #f5f7fb;
-      color: #080b12;
-      font-size: 19px;
-      font-weight: bold;
-      align-self: flex-end;
-    }
+#send{
+  width:48px;
+  height:48px;
+  border:0;
+  border-radius:14px;
+  background:#f5f7fb;
+  color:#080b12;
+  font-size:19px;
+  font-weight:bold;
+  align-self:flex-end;
+}
 
-    #send:active {
-      transform: scale(.95);
-    }
+#send:active{
+  transform:scale(.95);
+}
 
-    #send:disabled {
-      opacity: .4;
-    }
-  </style>
+#send:disabled{
+  opacity:.4;
+}
+</style>
 </head>
 
 <body>
 
 <div class="app">
 
-  <header>
-    <div class="logo">MiniAI</div>
-    <div class="status">Your personal local AI</div>
-  </header>
+<header>
+  <div class="logo">MiniAI</div>
+  <div class="status" id="status">Loading brain...</div>
+</header>
 
-  <main id="chat">
-    <div class="empty" id="empty">
-      <div>
-        <h1>MiniAI</h1>
-        <p>
-          Your small AI assistant.<br>
-          Once the model is connected, you can chat with it here.
-        </p>
-      </div>
+<main id="chat">
+
+  <div class="empty" id="empty">
+    <div>
+      <h1>MiniAI</h1>
+      <p>
+        A small AI that learns from your training data.
+      </p>
     </div>
-  </main>
-
-  <div class="input-area">
-    <textarea
-      id="input"
-      rows="1"
-      placeholder="Ask MiniAI something..."
-    ></textarea>
-
-    <button id="send">↑</button>
   </div>
+
+</main>
+
+<div class="input-area">
+
+  <textarea
+    id="input"
+    rows="1"
+    placeholder="Ask MiniAI something..."
+  ></textarea>
+
+  <button id="send">↑</button>
+
+</div>
 
 </div>
 
 <script>
-  const chat = document.getElementById("chat");
-  const input = document.getElementById("input");
-  const send = document.getElementById("send");
-  const empty = document.getElementById("empty");
 
-  function addMessage(text, type) {
-    if (empty) {
-      empty.remove();
+let model = null;
+
+const chat = document.getElementById("chat");
+const input = document.getElementById("input");
+const send = document.getElementById("send");
+const statusText = document.getElementById("status");
+const empty = document.getElementById("empty");
+
+
+/* =========================================================
+   LOAD MODEL
+   ========================================================= */
+
+async function loadModel(){
+
+  try{
+
+    const response = await fetch("model.json");
+
+    if(!response.ok){
+      throw new Error("Model not found");
     }
 
-    const message = document.createElement("div");
-    message.className = "message " + type;
-    message.textContent = text;
+    model = await response.json();
 
-    chat.appendChild(message);
-    chat.scrollTop = chat.scrollHeight;
+    statusText.textContent =
+      "Brain ready • " +
+      model.vocabulary_size.toLocaleString() +
+      " words";
+
+    send.disabled = false;
+
+  }catch(error){
+
+    console.error(error);
+
+    statusText.textContent =
+      "Brain not installed";
+
+    send.disabled = true;
+  }
+}
+
+
+/* =========================================================
+   TOKENIZER
+   ========================================================= */
+
+function tokenize(text){
+
+  return text
+    .toLowerCase()
+    .match(/[a-zA-Z0-9']+|[.,!?;:]/g) || [];
+
+}
+
+
+/* =========================================================
+   DETOKENIZER
+   ========================================================= */
+
+function detokenize(tokens){
+
+  let text = "";
+
+  const punctuation =
+    new Set([
+      ".",
+      ",",
+      "!",
+      "?",
+      ";",
+      ":"
+    ]);
+
+  for(const token of tokens){
+
+    if(!text){
+
+      text = token;
+
+    }else if(punctuation.has(token)){
+
+      text += token;
+
+    }else{
+
+      text += " " + token;
+
+    }
+
   }
 
-  function sendMessage() {
-    const text = input.value.trim();
+  return text;
+}
 
-    if (!text) return;
 
-    addMessage(text, "user");
+/* =========================================================
+   CHOOSE RELATED WORD
+   ========================================================= */
 
-    input.value = "";
-    input.style.height = "auto";
+function chooseNextWord(currentWord){
+
+  if(!model || !model.associations){
+    return null;
+  }
+
+  const choices =
+    model.associations[currentWord];
+
+  if(!choices || choices.length === 0){
+
+    return null;
+
+  }
+
+  const random = Math.random();
+
+  let total = 0;
+
+  for(const item of choices){
+
+    total += item[1];
+
+    if(random <= total){
+
+      return item[0];
+
+    }
+
+  }
+
+  return choices[choices.length - 1][0];
+}
+
+
+/* =========================================================
+   FIND STARTING WORD
+   ========================================================= */
+
+function findStartingWord(question){
+
+  const words = tokenize(question);
+
+  if(words.length === 0){
+
+    return null;
+
+  }
+
+  /*
+    Try to start from a word that actually exists
+    in the learned model.
+  */
+
+  for(const word of words){
+
+    if(
+      model.associations &&
+      model.associations[word]
+    ){
+
+      return word;
+
+    }
+
+  }
+
+  return words[words.length - 1];
+
+}
+
+
+/* =========================================================
+   GENERATE ANSWER
+   ========================================================= */
+
+function generateAnswer(question){
+
+  if(!model){
+
+    return "My brain hasn't loaded yet.";
+
+  }
+
+  const start =
+    findStartingWord(question);
+
+  if(!start){
+
+    return "I don't have enough information to answer that.";
+
+  }
+
+  const result = [start];
+
+  let current = start;
+
+  /*
+    Generate a short response.
+  */
+
+  for(let i = 0; i < 45; i++){
+
+    const next =
+      chooseNextWord(current);
+
+    if(!next){
+
+      break;
+
+    }
+
+    result.push(next);
+
+    current = next;
 
     /*
-      The actual AI model will be connected here
-      in a later step.
+      Occasionally stop after punctuation.
     */
 
-    setTimeout(() => {
-      addMessage(
-        "MiniAI's brain isn't connected yet. We'll add it in the next stages.",
-        "ai"
-      );
-    }, 300);
+    if(
+      result.length > 12 &&
+      [".","!","?"].includes(next) &&
+      Math.random() > 0.35
+    ){
+
+      break;
+
+    }
+
   }
 
-  send.addEventListener("click", sendMessage);
+  let answer =
+    detokenize(result);
 
-  input.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" && !event.shiftKey) {
+  /*
+    Capitalize the first character.
+  */
+
+  if(answer.length > 0){
+
+    answer =
+      answer.charAt(0).toUpperCase() +
+      answer.slice(1);
+
+  }
+
+  return answer;
+
+}
+
+
+/* =========================================================
+   ADD MESSAGE
+   ========================================================= */
+
+function addMessage(text,type){
+
+  if(empty){
+
+    empty.remove();
+
+  }
+
+  const message =
+    document.createElement("div");
+
+  message.className =
+    "message " + type;
+
+  message.textContent =
+    text;
+
+  chat.appendChild(message);
+
+  chat.scrollTop =
+    chat.scrollHeight;
+
+}
+
+
+/* =========================================================
+   SEND
+   ========================================================= */
+
+function sendMessage(){
+
+  const text =
+    input.value.trim();
+
+  if(!text || !model){
+
+    return;
+
+  }
+
+  addMessage(
+    text,
+    "user"
+  );
+
+  input.value = "";
+
+  input.style.height =
+    "auto";
+
+  send.disabled = true;
+
+  setTimeout(()=>{
+
+    const answer =
+      generateAnswer(text);
+
+    addMessage(
+      answer,
+      "ai"
+    );
+
+    send.disabled = false;
+
+    input.focus();
+
+  },100);
+
+}
+
+
+/* =========================================================
+   EVENTS
+   ========================================================= */
+
+send.addEventListener(
+  "click",
+  sendMessage
+);
+
+
+input.addEventListener(
+  "keydown",
+  event => {
+
+    if(
+      event.key === "Enter" &&
+      !event.shiftKey
+    ){
+
       event.preventDefault();
-      sendMessage();
-    }
-  });
 
-  input.addEventListener("input", () => {
-    input.style.height = "auto";
+      sendMessage();
+
+    }
+
+  }
+);
+
+
+input.addEventListener(
+  "input",
+  ()=>{
+
     input.style.height =
-      Math.min(input.scrollHeight, 130) + "px";
-  });
+      "auto";
+
+    input.style.height =
+      Math.min(
+        input.scrollHeight,
+        130
+      ) + "px";
+
+  }
+);
+
+
+/* =========================================================
+   START
+   ========================================================= */
+
+send.disabled = true;
+
+loadModel();
+
 </script>
 
 </body>
